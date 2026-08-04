@@ -1,0 +1,6 @@
+backup-creds.json
+config
+*.key
+.env
+.n8n/
+database.sqlite
