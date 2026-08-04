@@ -1,0 +1,824 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Router de Atendimento com IA\n\n**Entrada esperada (POST JSON)**\n\n`/webhook/router/whatsapp`\n```\n{ \"from\": \"5551999999999\", \"name\": \"Ana\", \"message\": \"...\" }\n```\n\n`/webhook/router/instagram`\n```\n{ \"sender_id\": \"17841...\", \"username\": \"ana.silva\", \"message\": \"...\" }\n```\n\nOs dois canais são normalizados para o mesmo contrato interno:\n`canal, contato_id, nome, mensagem, recebido_em`",
+        "height": 320,
+        "width": 400,
+        "color": 4
+      },
+      "id": "6e02407a-87f3-40a0-b9fc-043d47d514ba",
+      "name": "📋 Contrato de entrada",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -816,
+        -304
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "router/whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e918bd18-2e0f-4558-b001-235a40ee0878",
+      "name": "WhatsApp In",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -368,
+        -128
+      ],
+      "webhookId": "8e9c4b3d-6f8d-428f-921b-ed26d0f51145"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "router/instagram",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "edc4d3e0-86ab-4576-b6c8-09216058b147",
+      "name": "Instagram In",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -368,
+        144
+      ],
+      "webhookId": "414964f4-56a7-43a7-8a09-6a7551c49315"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "canal",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "contato_id",
+              "value": "={{ $json.body.from || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "nome",
+              "value": "={{ $json.body.name || \"Desconhecido\" }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "mensagem",
+              "value": "={{ $json.body.message || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "recebido_em",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "69e8f0b9-db1b-48b5-b8e7-ef4e030f94ca",
+      "name": "Normalizar WhatsApp",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -128,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "canal",
+              "value": "instagram",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "contato_id",
+              "value": "={{ $json.body.sender_id || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "nome",
+              "value": "={{ $json.body.username || \"Desconhecido\" }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "mensagem",
+              "value": "={{ $json.body.message || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "recebido_em",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "eea12c90-0391-4458-8c67-71f21c057eb2",
+      "name": "Normalizar Instagram",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -128,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json.mensagem }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "reserva",
+              "description": "Quer reservar, alugar, verificar disponibilidade de datas ou fechar uma estadia."
+            },
+            {
+              "category": "preco",
+              "description": "Pergunta sobre valores, diárias, taxas, formas de pagamento ou desconto."
+            },
+            {
+              "category": "suporte",
+              "description": "Já é hóspede ou cliente e relata problema, manutenção, check-in/check-out ou dúvida operacional."
+            },
+            {
+              "category": "humano",
+              "description": "Pede explicitamente falar com uma pessoa, reclama, ou é assunto sensível/jurídico."
+            }
+          ]
+        },
+        "options": {
+          "fallback": "other"
+        }
+      },
+      "id": "7a91c980-d514-43b7-a0b8-980f1101a8dc",
+      "name": "Classificar Intenção",
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-6",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {}
+      },
+      "id": "8f17f6e6-6ebd-4722-a423-a9f727f3ed55",
+      "name": "Claude (chave Anthropic do CLIENTE)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        128,
+        240
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "anthropicApi": {
+          "id": "VML98wiWbAhz67eu",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "rota",
+              "value": "reserva",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "agente",
+              "value": "agent_reservas",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "sla_minutos",
+              "value": "5",
+              "type": "number"
+            },
+            {
+              "id": "4",
+              "name": "acao",
+              "value": "Consultar disponibilidade e enviar opções de datas",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "57b7b704-1535-4c3f-bf28-8eccf2cf52f5",
+      "name": "Agente de Reservas",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        480,
+        -304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "rota",
+              "value": "preco",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "agente",
+              "value": "agent_comercial",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "sla_minutos",
+              "value": "10",
+              "type": "number"
+            },
+            {
+              "id": "4",
+              "name": "acao",
+              "value": "Enviar tabela de diárias e condições de pagamento",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "f7d52140-ea1a-4ca2-a16a-dde5551613e4",
+      "name": "Agente Comercial",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        480,
+        -144
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "rota",
+              "value": "suporte",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "agente",
+              "value": "agent_suporte",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "sla_minutos",
+              "value": "15",
+              "type": "number"
+            },
+            {
+              "id": "4",
+              "name": "acao",
+              "value": "Abrir ticket e responder dúvida operacional",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "25a18674-8daf-4fd6-b5fb-73dc5c1f0082",
+      "name": "Agente de Suporte",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        480,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "rota",
+              "value": "humano",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "agente",
+              "value": "fila_humana",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "sla_minutos",
+              "value": "2",
+              "type": "number"
+            },
+            {
+              "id": "4",
+              "name": "acao",
+              "value": "Notificar equipe e transferir conversa",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "23af821a-ca7e-4341-bd65-c69fbc56592b",
+      "name": "Escalar para Humano",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        480,
+        192
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "5fc3118c-c0b9-4c40-a7cd-6cf99edd4be3",
+      "name": "Descartar (spam / outros)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        480,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: \"ok\", canal: $json.canal, rota: $json.rota || \"descartado\", agente: $json.agente || null, sla_minutos: $json.sla_minutos || null }) }}",
+        "options": {}
+      },
+      "id": "965002e7-975b-4fb4-bd19-5895c57420bf",
+      "name": "Responder ao canal",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1008,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 🔑 A chave de API é do CLIENTE\n\nO nó de classificação usa **Claude (Anthropic)** e roda com a **chave de API da própria empresa contratante**.\n\n**Como funciona:**\n1. O cliente cria a conta em `console.anthropic.com` (titularidade dele).\n2. O cliente gera a API key e a cadastra na credencial deste nó.\n3. O consumo é faturado direto no cartão do cliente, por uso.\n\n**Importante:**\n- Não uso nem revendo chave minha neste projeto.\n- Eu não tenho acesso à fatura nem ao limite de gasto do cliente.\n- O cliente pode revogar a chave a qualquer momento, sem depender de mim.\n- Custo estimado: fração de centavo por mensagem classificada.",
+        "height": 300,
+        "width": 420,
+        "color": 3
+      },
+      "id": "4bd49925-4f85-47ca-8e76-014eb3211916",
+      "name": "🔑 Credencial da IA",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        832,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 📄 Escopo comercial (texto para proposta)\n\n**Divisão de custos**\n- Meu honorário cobre **desenvolvimento, implantação e documentação** do fluxo.\n- O **custo de operação do modelo de IA é despesa do contratante**, faturado por uso direto na conta Anthropic dele.\n\n**Parágrafo pronto para a proposta:**\n\n> A classificação das conversas é feita por um modelo de IA (Claude, da Anthropic) executado com a chave de API da própria empresa contratante. Você cria a conta, gera a chave e ela fica cadastrada na sua instância — o consumo é faturado diretamente na sua conta, com transparência total de custo e possibilidade de revogar o acesso a qualquer momento. Não há dependência de chaves ou contas minhas para o sistema continuar funcionando.",
+        "height": 400,
+        "width": 460,
+        "color": 5
+      },
+      "id": "4f957315-24e0-4d24-b769-edd52685f543",
+      "name": "📄 Escopo comercial",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1312,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "RB8IZdWAq465p089",
+          "cachedResultName": "Leads de Atendimento"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "recebido_em": "={{ $json.recebido_em }}",
+            "canal": "={{ $json.canal }}",
+            "contato_id": "={{ $json.contato_id }}",
+            "nome": "={{ $json.nome }}",
+            "mensagem": "={{ $json.mensagem }}",
+            "rota": "={{ $json.rota || \"descartado\" }}",
+            "agente": "={{ $json.agente || \"\" }}",
+            "sla_minutos": "={{ $json.sla_minutos || 0 }}",
+            "observacao": "={{ $json.observacao || \"\" }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "recebido_em",
+              "displayName": "recebido_em",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "canal",
+              "displayName": "canal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "contato_id",
+              "displayName": "contato_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "mensagem",
+              "displayName": "mensagem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "rota",
+              "displayName": "rota",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "agente",
+              "displayName": "agente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "sla_minutos",
+              "displayName": "sla_minutos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "observacao",
+              "displayName": "observacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        0
+      ],
+      "id": "reg-lead-0001",
+      "name": "Registrar Lead"
+    },
+    {
+      "parameters": {
+        "content": "## 🗃️ Registro de leads\n\nTodo lead roteado é gravado na tabela **Leads de Atendimento** antes da resposta ao canal.\n\nColunas: recebido_em, canal, contato_id, nome, mensagem, rota, agente, sla_minutos.\n\nSpam também é registrado (rota = descartado), para o cliente auditar o que foi filtrado.\n\n**Troca simples:** este nó pode ser substituído por Google Sheets, Postgres, Airtable ou o CRM do cliente sem alterar o resto do fluxo.",
+        "height": 340,
+        "width": 440,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        -416
+      ],
+      "id": "sticky-reg-001",
+      "name": "🗃️ Registro de leads"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "rota",
+              "value": "humano_fallback",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "agente",
+              "value": "fila_humana",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "sla_minutos",
+              "value": "2",
+              "type": "number"
+            },
+            {
+              "id": "4",
+              "name": "acao",
+              "value": "IA indisponível — triagem manual imediata",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "observacao",
+              "value": "={{ \"IA indisponivel apos 3 tentativas — triagem manual. Execucao n8n #\" + $execution.id + ($json.error ? \" | \" + ($json.error.message || $json.error) : \"\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        480,
+        544
+      ],
+      "id": "fallback-ia-001",
+      "name": "Fallback: Fila Humana (IA indisponível)"
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ Política de falha\n\n**Retry:** o classificador e o modelo Claude tentam 3 vezes, com 2s de espera entre tentativas. Cobre 429 (rate limit) e 529 (overload) da Anthropic.\n\n**Se as 3 tentativas falharem:** o lead NÃO é perdido. Ele sai pela saída de erro e vai para a fila humana com SLA de 2 minutos, é gravado na tabela de leads com a causa do erro na coluna `observacao`, e o canal recebe resposta normalmente.\n\n**Consequência para o cliente:** indisponibilidade da IA degrada o atendimento para manual, nunca para silêncio.",
+        "height": 330,
+        "width": 440,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        -48
+      ],
+      "id": "sticky-erro-001",
+      "name": "⚠️ Política de falha"
+    }
+  ],
+  "connections": {
+    "WhatsApp In": {
+      "main": [
+        [
+          {
+            "node": "Normalizar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram In": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Instagram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Classificar Intenção",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Instagram": {
+      "main": [
+        [
+          {
+            "node": "Classificar Intenção",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classificar Intenção": {
+      "main": [
+        [
+          {
+            "node": "Agente de Reservas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agente Comercial",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agente de Suporte",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Escalar para Humano",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Descartar (spam / outros)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fallback: Fila Humana (IA indisponível)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude (chave Anthropic do CLIENTE)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classificar Intenção",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente de Reservas": {
+      "main": [
+        [
+          {
+            "node": "Registrar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente Comercial": {
+      "main": [
+        [
+          {
+            "node": "Registrar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente de Suporte": {
+      "main": [
+        [
+          {
+            "node": "Registrar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalar para Humano": {
+      "main": [
+        [
+          {
+            "node": "Registrar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descartar (spam / outros)": {
+      "main": [
+        [
+          {
+            "node": "Registrar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Lead": {
+      "main": [
+        [
+          {
+            "node": "Responder ao canal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback: Fila Humana (IA indisponível)": {
+      "main": [
+        [
+          {
+            "node": "Registrar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9fb9a2763f553dffc32dcef96d3dc67f801d7206253041153fe21a9c071ee036"
+  }
+}
