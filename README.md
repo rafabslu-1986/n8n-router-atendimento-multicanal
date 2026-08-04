@@ -2,6 +2,8 @@
 
 Roteador de atendimento em n8n que recebe mensagens de WhatsApp e Instagram, classifica a intencao com Claude (API da Anthropic) e encaminha cada conversa para o time correto, registrando todos os leads em uma tabela consultavel.
 
+![Canvas do fluxo no n8n](docs/canvas.png)
+
 ## Problema que resolve
 
 Operacao com dois canais de entrada e triagem manual: alguem le cada mensagem e decide para quem encaminhar. Isso gera atraso na resposta, perda de lead e nenhum historico consultavel. O fluxo elimina a triagem manual e cria o registro.
@@ -86,7 +88,6 @@ Todos os seis desfechos foram validados de ponta a ponta e gravados na Data Tabl
 ```
 workflow/router-atendimento.json   export do fluxo
 docs/canvas.png                    canvas com os 18 nos
-docs/arquitetura.png               diagrama da solucao
 docs/leads-data-table.png          tabela de leads preenchida
 docs/leads-fallback.png            detalhe do registro de fallback
 ```
